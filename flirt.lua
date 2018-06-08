@@ -1,9 +1,12 @@
+local loadconf = require 'loadconf'
+
 -- FIXME
 local config_path = ("%s/.config/flirt/conf.lua"):format(os.getenv("HOME"))
 
 local config = {
-   stable = "0.10.0", -- versions past this number are considered prerelease
+   stable = loadconf.stable_love, -- versions past this number are considered prerelease
 }
+assert(type(config.stable) == 'string')
 
 local function fail(...)
    io.stderr:write("Error: " .. string.format(...) .. "\n")
@@ -22,6 +25,8 @@ local function load_versions()
       for k, v in pairs(t) do
          config[k] = v
       end
+   else
+      return nil, err
    end
 end
 
@@ -38,10 +43,9 @@ local function save_versions()
    log("config saved to %q", config_path)
 end
 
-local loadconf = require 'loadconf'
-
 local function sopen(exec_str)
-   local f, err = io.popen(exec_str)
+   local f, str, err
+   f, err = io.popen(exec_str)
    if not f then return nil, err end
 
    str, err = f:read('*a')
@@ -60,6 +64,7 @@ local names = {
    "love07",
    "love08",
    "love09",
+   "love10",
    "love-hg"
 }
 
@@ -67,26 +72,16 @@ local function trim(s)
    return (s:gsub("^%s+",""):gsub("%s+$", ""))
 end
 
--- Find version for a love exe by running a dummy project
 local function get_version_for(exe)
-   local dummy = "/tmp/flirt_dummy_project"
-   -- FIXME: delete later
-   os.execute(("mkdir -p %q"):format(dummy))
-
-   assert(io.open(dummy .. "/conf.lua", "w")):write([[
-   print(string.format('flirt(%d.%d.%d)',
-         love._version_major, love._version_minor, love._version_revision))
-   os.exit()
-   ]])
-
-   local s = sopen(string.format("%q %q", exe, dummy))
-   if s and s ~= "" then
-      local v = s:match("flirt(%b())")
+   local s = sopen(string.format("%q --version", exe))
+   if s then
+      local v = s:match("%d+%.%d+%.%d+")
       if v then
-         return v:sub(2, -2)
+         return v
       end
    end
-   return nil, ("invalid executable: %q"):format(exe)
+
+   return nil, ("invalid exectuable: %q"):format(exe)
 end
 
 local function add_exe(s)
@@ -110,7 +105,7 @@ local function guess()
 end
 
 local function exists(fname)
-   local f, err = io.open(fname) -- FIXME: does not work in windows
+   local f = io.open(fname) -- FIXME: does not work in windows
    if f then
       f:close()
       return true
@@ -131,15 +126,17 @@ local function best_exe_for(version)
    if config[version] then
       return config[version]
    end
+
    local maj, min, rev = vsplit(version)
    for v, path in pairs(config) do
-      if not v == 'stable' then
+      if v ~= 'stable' then
          local imaj, imin, irev = vsplit(v)
          if imaj == maj and imin == min and irev > rev then -- better patch
             return path
          end
       end
    end
+
    return nil
 end
 
@@ -181,7 +178,8 @@ end
 --  @return the configuration table, or `nil, err` if an error occured.
 local function parse_archive(fname)
    -- FIXME: use a proper cross-platform zip library
-   local f, err = io.popen(("unzip -p %q conf.lua 2> /dev/null"):format(fname))
+   local f, str, err
+   f, err = io.popen(("unzip -p %q conf.lua 2> /dev/null"):format(fname))
    if not f then return nil, err end
 
    str, err = f:read('*a')
@@ -189,7 +187,10 @@ local function parse_archive(fname)
 
    f:close()
 
-   return loadconf.parse_string(str)
+   return loadconf.parse_string(str, "@"..fname.."/conf.lua", {
+      program = "flirt",
+      friendly = true
+   })
 end
 
 local function bash_escape(s)
@@ -223,7 +224,10 @@ local function main(...)
       return
    elseif fname ~= nil and exists(fname) then
       if is_dir(fname) and exists(fname .. "/conf.lua") then
-         version = assert(loadconf.parse_file(fname.."/conf.lua")).version
+         version = assert(loadconf.parse_file(fname.."/conf.lua", {
+            program = "flirt",
+            friendly = true
+         })).version
       else
          version = assert(parse_archive(fname)).version
       end

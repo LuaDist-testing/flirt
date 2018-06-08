@@ -1,16 +1,16 @@
 -- This file was automatically generated for the LuaDist project.
 
 package = "flirt"
-version = "0.1.0-2"
+version = "0.2.0-1"
 -- LuaDist source
 source = {
-  tag = "0.1.0-2",
+  tag = "0.2.0-1",
   url = "git://github.com/LuaDist-testing/flirt.git"
 }
 -- Original source
 -- source = {
 --    url = "git://github.com/Alloyed/flirt",
---    tag = "v0.1.0"
+--    tag = "v0.2.0"
 -- }
 description = {
    summary = "A wrapper for running love games",
@@ -22,7 +22,7 @@ for.]],
    license = "MIT"
 }
 dependencies = {
-   "lua", "loadconf ~> 0.1"
+   "lua ~> 5.1", "loadconf ~> 0.2"
 }
 build = {
    type = "builtin",
