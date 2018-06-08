@@ -1,7 +1,8 @@
 package = "flirt"
-version = "scm-0"
+version = "0.2.0-1"
 source = {
-   url = "git://github.com/Alloyed/flirt"
+   url = "git://github.com/Alloyed/flirt",
+   tag = "v0.2.0"
 }
 description = {
    summary = "A wrapper for running love games",
@@ -13,16 +14,16 @@ for.]],
    license = "MIT"
 }
 dependencies = {
-   "lua ~> 5.1",
-   "loadconf >= 0.3.3, < 0.4"
+   "lua ~> 5.1", "loadconf ~> 0.2"
 }
 build = {
    type = "builtin",
    modules = {
-      ["flirt"] = "flirt.lua"
+      flirt = "flirt.lua"
    },
    install = {
-      bin = {"bin/flirt"}
+      bin = {
+         "bin/flirt"
+      }
    }
 }
-
